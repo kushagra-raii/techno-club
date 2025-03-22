@@ -11,10 +11,10 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { name: 'Home', href: '/' },
-  { name: 'Clubs', href: '#clubs' },
-  { name: 'Events', href: '#events' },
-  { name: 'Team', href: '#team' },
-  { name: 'Contact', href: '#contact' },
+  { name: 'Clubs', href: '/clubs' },
+  { name: 'Events', href: '/events' },
+  { name: 'Team', href: '/#team' },
+  { name: 'Contact', href: '/#contact' },
 ];
 
 const Navbar: React.FC = () => {
