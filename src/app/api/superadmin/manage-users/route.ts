@@ -8,6 +8,7 @@ export async function PATCH(request: NextRequest) {
   try {
     // Verify that the user is a superadmin
     const token = await getToken({ req: request });
+    console.log('Token in superadmin API:', { role: token?.role, id: token?.id });
     
     // Check if the user is authenticated and has the super admin role
     if (!token || token.role !== 'superadmin') {
@@ -22,6 +23,7 @@ export async function PATCH(request: NextRequest) {
     
     // Parse the request body
     const { userId, action, data } = await request.json();
+    console.log('Received superadmin request:', { userId, action, data });
     
     if (!userId || !action) {
       return NextResponse.json(
@@ -39,6 +41,14 @@ export async function PATCH(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    console.log('Found user to modify:', { 
+      id: userToModify._id, 
+      name: userToModify.name, 
+      role: userToModify.role, 
+      club: userToModify.club,
+      creditScore: userToModify.creditScore 
+    });
     
     // Prevent super admin from modifying their own account via this endpoint
     if (token.id === userId) {
@@ -78,10 +88,18 @@ export async function PATCH(request: NextRequest) {
       case 'assign-club':
         // Validate club
         if (data?.club !== undefined) {
+          console.log('Assigning club (superadmin):', data.club);
+          
           // Empty string is valid for removing club
           if (data.club === '' || ['IEEE', 'ACM', 'AWS', 'GDG', 'STIC'].includes(data.club)) {
             userToModify.club = data.club as ClubType;
             await userToModify.save();
+            
+            const updatedUser = await User.findById(userId);
+            console.log('User after club update (superadmin):', { 
+              id: updatedUser?._id, 
+              club: updatedUser?.club 
+            });
 
             return NextResponse.json({
               message: data.club ? `User assigned to ${data.club} club` : 'User removed from club',
@@ -110,9 +128,17 @@ export async function PATCH(request: NextRequest) {
       case 'update-credit':
         // Validate credit score
         if (data?.creditScore !== undefined) {
+          console.log('Updating credit score (superadmin):', data.creditScore);
+          
           if (typeof data.creditScore === 'number' && data.creditScore >= 0) {
             userToModify.creditScore = data.creditScore;
             await userToModify.save();
+            
+            const updatedUser = await User.findById(userId);
+            console.log('User after credit score update (superadmin):', { 
+              id: updatedUser?._id, 
+              creditScore: updatedUser?.creditScore 
+            });
 
             return NextResponse.json({
               message: `User credit score updated to ${data.creditScore}`,

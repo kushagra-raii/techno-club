@@ -52,6 +52,10 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({
     const hasClubChanged = club !== user.club;
     const hasCreditChanged = creditScore !== user.creditScore;
 
+    console.log('Before submission - Original user:', user);
+    console.log('Before submission - New values:', { role, club, creditScore });
+    console.log('Changes detected:', { hasRoleChanged, hasClubChanged, hasCreditChanged });
+
     if (!hasRoleChanged && !hasClubChanged && !hasCreditChanged) {
       setError('No changes to save');
       setLoading(false);
@@ -66,49 +70,59 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({
         : '/api/admin/manage-members';
 
       if (hasRoleChanged) {
+        const roleUpdateBody = {
+          userId: user.id,
+          action: 'update-role',
+          data: { role },
+        };
+        console.log('Role update request:', roleUpdateBody);
+        
         updates.push(
           fetch(apiEndpoint, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: user.id,
-              action: 'update-role',
-              data: { role },
-            }),
+            body: JSON.stringify(roleUpdateBody),
           }).then(res => res.json())
         );
       }
 
       if (hasClubChanged) {
+        const clubUpdateBody = {
+          userId: user.id,
+          action: 'assign-club',
+          data: { club },
+        };
+        console.log('Club update request:', clubUpdateBody);
+        
         updates.push(
           fetch(apiEndpoint, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: user.id,
-              action: 'assign-club',
-              data: { club },
-            }),
+            body: JSON.stringify(clubUpdateBody),
           }).then(res => res.json())
         );
       }
 
       if (hasCreditChanged) {
+        const creditUpdateBody = {
+          userId: user.id,
+          action: 'update-credit',
+          data: { creditScore },
+        };
+        console.log('Credit update request:', creditUpdateBody);
+        
         updates.push(
           fetch(apiEndpoint, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: user.id,
-              action: 'update-credit',
-              data: { creditScore },
-            }),
+            body: JSON.stringify(creditUpdateBody),
           }).then(res => res.json())
         );
       }
 
       // Execute all updates in parallel
       const results = await Promise.all(updates);
+      console.log('API response results:', results);
       
       // Check if any request failed
       const failedUpdate = results.find(result => result.error);
@@ -119,6 +133,7 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
       // Get the most recent updated user data
       const updatedUser = results[results.length - 1].user || user;
+      console.log('Final updated user:', updatedUser);
       
       setSuccessMessage('User updated successfully');
       onSuccess?.(updatedUser);
@@ -129,6 +144,7 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({
       }, 1500);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An error occurred';
+      console.error('Error during update:', error);
       setError(message);
       onError?.(message);
     } finally {

@@ -5,13 +5,16 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
+type UserRole = 'user' | 'member' | 'admin' | 'superadmin';
+type ClubType = 'IEEE' | 'ACM' | 'AWS' | 'GDG' | 'STIC' | '';
+
 type User = {
   id: string;
   name: string;
   email: string;
-  role: string;
+  role: UserRole;
   image?: string;
-  club: string;
+  club: ClubType;
   creditScore: number;
 };
 
@@ -19,10 +22,10 @@ type RequestData = {
   userId: string;
   action: string;
   data?: {
-    role?: string;
+    role?: UserRole;
     name?: string;
     email?: string;
-    club?: string;
+    club?: ClubType;
     creditScore?: number;
   };
 };
@@ -177,7 +180,7 @@ const AdminDashboard: React.FC = () => {
       };
       
       if (action === 'update-role') {
-        requestData.data = { role: formData.role };
+        requestData.data = { role: formData.role as UserRole };
       } else if (action === 'update-info') {
         requestData.data = {
           name: formData.name || undefined,
@@ -185,9 +188,10 @@ const AdminDashboard: React.FC = () => {
         };
       } else if (action === 'assign-club') {
         // If admin has a club, only allow assigning their club
-        const clubToAssign = session?.user?.club && session.user.club !== '' 
-          ? session.user.club 
-          : formData.club;
+        const adminClub = session?.user?.club as ClubType;
+        const clubToAssign = adminClub && adminClub !== '' 
+          ? adminClub 
+          : formData.club as ClubType;
           
         requestData.data = { club: clubToAssign };
       } else if (action === 'update-credit') {
@@ -214,7 +218,7 @@ const AdminDashboard: React.FC = () => {
       } else if (action === 'update-role') {
         setUsers(users.map(user => {
           if (user.id === selectedUser.id) {
-            return { ...user, role: formData.role };
+            return { ...user, role: formData.role as UserRole };
           }
           return user;
         }));
@@ -234,7 +238,7 @@ const AdminDashboard: React.FC = () => {
       } else if (action === 'assign-club') {
         const clubToAssign = session?.user?.club && session.user.club !== '' 
           ? session.user.club 
-          : formData.club;
+          : formData.club as ClubType;
         setUsers(users.map(user => {
           if (user.id === selectedUser.id) {
             return { ...user, club: clubToAssign };
@@ -510,7 +514,7 @@ const AdminDashboard: React.FC = () => {
                   <label className="block text-gray-400 mb-2">Select Role</label>
                   <select
                     value={formData.role}
-                    onChange={(e) => setFormData({...formData, role: e.target.value})}
+                    onChange={(e) => setFormData({...formData, role: e.target.value as UserRole})}
                     className="w-full bg-gray-800 border border-gray-700 rounded-md p-2 text-white"
                   >
                     <option value="">Select role...</option>
@@ -561,12 +565,12 @@ const AdminDashboard: React.FC = () => {
                   <label className="block text-gray-400 mb-2">Select Club</label>
                   <select
                     value={formData.club}
-                    onChange={(e) => setFormData({...formData, club: e.target.value})}
+                    onChange={(e) => setFormData({...formData, club: e.target.value as ClubType})}
                     className="w-full bg-gray-800 border border-gray-700 rounded-md p-2 text-white"
-                    disabled={session?.user?.club && session.user.club !== ''}
+                    disabled={Boolean(session?.user?.club && (session.user.club as ClubType) !== '')}
                   >
                     <option value="">No Club</option>
-                    {!session?.user?.club || session.user.club === '' ? (
+                    {!session?.user?.club || (session.user.club as ClubType) === '' ? (
                       <>
                         <option value="IEEE">IEEE</option>
                         <option value="ACM">ACM</option>
@@ -575,10 +579,10 @@ const AdminDashboard: React.FC = () => {
                         <option value="STIC">STIC</option>
                       </>
                     ) : (
-                      <option value={session.user.club}>{session.user.club}</option>
+                      <option value={session.user.club as ClubType}>{session.user.club}</option>
                     )}
                   </select>
-                  {session?.user?.club && session.user.club !== '' && (
+                  {session?.user?.club && (session.user.club as ClubType) !== '' && (
                     <p className="mt-2 text-xs text-gray-400">
                       As an admin, you can only assign users to your own club: {session.user.club}
                     </p>

@@ -11,12 +11,17 @@
   "dependencies": {
     "@auth/mongodb-adapter": "^3.8.0",
     "bcryptjs": "^3.0.2",
+    "cloudinary": "^2.6.0",
+    "clsx": "^2.1.1",
+    "date-fns": "^3.6.0",
     "mongodb": "^6.15.0",
     "mongoose": "^8.12.2",
     "next": "15.2.3",
     "next-auth": "^4.24.11",
+    "nodemailer": "^6.10.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^3.0.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

@@ -2,6 +2,9 @@
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
 const nextConfig = {
+  images: {
+    domains: ['localhost', 'res.cloudinary.com'],
+  },
   webpack: (config, { dev, isServer }) => {
     // Add the mini-css-extract-plugin
     if (!isServer) {

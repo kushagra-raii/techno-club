@@ -31,7 +31,13 @@ const SignUp = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ 
+          name, 
+          email, 
+          password,
+          club: '', // Set default empty club
+          creditScore: 0, // Set default credit score
+        }),
       });
 
       const data = await response.json();

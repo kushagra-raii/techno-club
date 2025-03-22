@@ -75,6 +75,7 @@ export default function UserManagementPage() {
   };
 
   const handleSuccess = (updatedUser: User) => {
+    console.log('User successfully updated:', updatedUser);
     setSuccessMessage(`Successfully updated ${updatedUser.name}`);
     
     // Update the user in the list
@@ -91,6 +92,7 @@ export default function UserManagementPage() {
   };
 
   const handleError = (message: string) => {
+    console.error('Error updating user:', message);
     setError(message);
     
     // Clear error after 3 seconds

@@ -8,6 +8,8 @@ export async function PATCH(request: NextRequest) {
   try {
     // Verify that the user is an admin or superadmin
     const token = await getToken({ req: request });
+    console.log('Token in manage-members API:', { role: token?.role, club: token?.club });
+    
     if (!token || !['admin', 'superadmin'].includes(token.role as string)) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 403 });
     }
@@ -17,6 +19,7 @@ export async function PATCH(request: NextRequest) {
 
     // Parse request body
     const { userId, action, data } = await request.json();
+    console.log('Received request:', { userId, action, data });
 
     // Validate required parameters
     if (!userId || !action) {
@@ -28,6 +31,14 @@ export async function PATCH(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ message: 'User not found' }, { status: 404 });
     }
+    
+    console.log('Found user:', { 
+      id: user._id, 
+      name: user.name, 
+      role: user.role, 
+      club: user.club,
+      creditScore: user.creditScore 
+    });
 
     // Prevent admin modification by non-superadmins
     if (['admin', 'superadmin'].includes(user.role) && token.role !== 'superadmin') {
@@ -119,6 +130,8 @@ export async function PATCH(request: NextRequest) {
       case 'assign-club':
         // Validate club
         if (data?.club !== undefined) {
+          console.log('Assigning club:', data.club);
+          
           // If admin has a club, they can only assign their own club
           if (token.role === 'admin' && token.club && data.club !== '' && data.club !== token.club) {
             return NextResponse.json(
@@ -131,6 +144,12 @@ export async function PATCH(request: NextRequest) {
           if (data.club === '' || ['IEEE', 'ACM', 'AWS', 'GDG', 'STIC'].includes(data.club)) {
             user.club = data.club as ClubType;
             await user.save();
+            
+            const updatedUser = await User.findById(userId);
+            console.log('User after club update:', { 
+              id: updatedUser?._id, 
+              club: updatedUser?.club 
+            });
 
             return NextResponse.json({
               message: data.club ? `User assigned to ${data.club} club` : 'User removed from club',
@@ -159,9 +178,17 @@ export async function PATCH(request: NextRequest) {
       case 'update-credit':
         // Validate credit score
         if (data?.creditScore !== undefined) {
+          console.log('Updating credit score to:', data.creditScore);
+          
           if (typeof data.creditScore === 'number' && data.creditScore >= 0) {
             user.creditScore = data.creditScore;
             await user.save();
+            
+            const updatedUser = await User.findById(userId);
+            console.log('User after credit score update:', { 
+              id: updatedUser?._id, 
+              creditScore: updatedUser?.creditScore 
+            });
 
             return NextResponse.json({
               message: `User credit score updated to ${data.creditScore}`,

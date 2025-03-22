@@ -5,13 +5,16 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
+type UserRole = 'user' | 'member' | 'admin' | 'superadmin';
+type ClubType = 'IEEE' | 'ACM' | 'AWS' | 'GDG' | 'STIC' | '';
+
 type User = {
   id: string;
   name: string;
   email: string;
-  role: string;
+  role: UserRole;
   image?: string;
-  club: string;
+  club: ClubType;
   creditScore: number;
 };
 
@@ -19,10 +22,10 @@ type RequestData = {
   userId: string;
   action: string;
   data?: {
-    role?: string;
+    role?: UserRole;
     name?: string;
     email?: string;
-    club?: string;
+    club?: ClubType;
     creditScore?: number;
   };
 };
@@ -190,14 +193,14 @@ const SuperAdminDashboard: React.FC = () => {
       };
       
       if (action === 'update-role') {
-        requestData.data = { role: formData.role };
+        requestData.data = { role: formData.role as UserRole };
       } else if (action === 'update-info') {
         requestData.data = {
           name: formData.name || undefined,
           email: formData.email || undefined,
         };
       } else if (action === 'assign-club') {
-        requestData.data = { club: formData.club };
+        requestData.data = { club: formData.club as ClubType };
       } else if (action === 'update-credit') {
         requestData.data = { creditScore: formData.creditScore };
       }
@@ -222,7 +225,7 @@ const SuperAdminDashboard: React.FC = () => {
       } else if (action === 'update-role') {
         setUsers(users.map(user => {
           if (user.id === selectedUser.id) {
-            return { ...user, role: formData.role };
+            return { ...user, role: formData.role as UserRole };
           }
           return user;
         }));
@@ -242,7 +245,7 @@ const SuperAdminDashboard: React.FC = () => {
       } else if (action === 'assign-club') {
         setUsers(users.map(user => {
           if (user.id === selectedUser.id) {
-            return { ...user, club: formData.club };
+            return { ...user, club: formData.club as ClubType };
           }
           return user;
         }));
@@ -551,7 +554,7 @@ const SuperAdminDashboard: React.FC = () => {
                 <label className="block text-gray-400 mb-2">Role</label>
                 <select 
                   value={formData.role}
-                  onChange={(e) => setFormData({...formData, role: e.target.value})}
+                  onChange={(e) => setFormData({...formData, role: e.target.value as UserRole})}
                   className="w-full px-4 py-2 rounded-md bg-gray-800 text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="">Select a role</option>
@@ -568,7 +571,7 @@ const SuperAdminDashboard: React.FC = () => {
                 <label className="block text-gray-400 mb-2">Club</label>
                 <select 
                   value={formData.club}
-                  onChange={(e) => setFormData({...formData, club: e.target.value})}
+                  onChange={(e) => setFormData({...formData, club: e.target.value as ClubType})}
                   className="w-full px-4 py-2 rounded-md bg-gray-800 text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="">No Club</option>
