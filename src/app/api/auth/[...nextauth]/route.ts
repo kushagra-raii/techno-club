@@ -5,7 +5,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import clientPromise from '@/lib/mongodb';
 import { connectToDatabase } from '@/lib/mongoose';
-import User, { UserRole } from '@/lib/models/User';
+import User, { UserRole, ClubType } from '@/lib/models/User';
 
 export const authOptions: NextAuthOptions = {
   adapter: MongoDBAdapter(clientPromise),
@@ -20,6 +20,8 @@ export const authOptions: NextAuthOptions = {
           email: profile.email,
           image: profile.picture,
           role: 'user' as UserRole, // Default role for Google sign-in
+          club: '' as ClubType, // Default empty club for Google sign-in
+          creditScore: 0, // Default credit score for Google sign-in
         };
       },
     }),
@@ -49,15 +51,15 @@ export const authOptions: NextAuthOptions = {
         }
         
         // Convert Mongoose document to plain object
-        const userObject = {
+        return {
           id: user._id.toString(),
           name: user.name,
           email: user.email,
           image: user.image || '',
           role: user.role,
+          club: (user.club || '') as ClubType,
+          creditScore: user.creditScore || 0,
         };
-        
-        return userObject;
       },
     }),
   ],
@@ -66,6 +68,8 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.role = user.role as UserRole;
         token.id = user.id;
+        token.club = user.club as ClubType;
+        token.creditScore = user.creditScore;
       } else if (token.email) {
         // If we have a token but no user (e.g., after refresh), fetch the latest role
         await connectToDatabase();
@@ -73,6 +77,8 @@ export const authOptions: NextAuthOptions = {
         if (dbUser) {
           token.role = dbUser.role;
           token.id = dbUser._id.toString();
+          token.club = dbUser.club;
+          token.creditScore = dbUser.creditScore;
         }
       }
       return token;
@@ -81,6 +87,8 @@ export const authOptions: NextAuthOptions = {
       if (token && session.user) {
         session.user.role = token.role as UserRole;
         session.user.id = token.id as string;
+        session.user.club = (token.club || '') as ClubType;
+        session.user.creditScore = token.creditScore as number || 0;
       }
       return session;
     },

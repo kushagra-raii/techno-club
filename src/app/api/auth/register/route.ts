@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { connectToDatabase } from '@/lib/mongoose';
-import User from '@/lib/models/User';
+import User, { UserRole, ClubType } from '@/lib/models/User';
 
 export async function POST(request: Request) {
   try {
-    const { name, email, password } = await request.json();
+    const { name, email, password, club = '', creditScore = 0 } = await request.json();
 
     // Validate input
     if (!name || !email || !password) {
@@ -35,7 +35,9 @@ export async function POST(request: Request) {
       name,
       email,
       password: hashedPassword,
-      role: 'user', // Default role
+      role: 'user' as UserRole, // Default role
+      club: club as ClubType, // Club assignment
+      creditScore, // Credit score
     });
 
     await newUser.save();
@@ -48,6 +50,8 @@ export async function POST(request: Request) {
           name: newUser.name,
           email: newUser.email,
           role: newUser.role,
+          club: newUser.club,
+          creditScore: newUser.creditScore,
         },
       },
       { status: 201 }

@@ -2,15 +2,27 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import useAuth from '@/lib/hooks/useAuth';
+import { useSession } from 'next-auth/react';
+import Link from 'next/link';
 import LogoutButton from '@/components/LogoutButton';
 
 const Dashboard = () => {
-  const { session, isLoading, isAuthenticated, userRole } = useAuth();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [greeting, setGreeting] = useState('');
+  
+  const isLoading = status === 'loading';
+  const isAuthenticated = status === 'authenticated';
+  const userRole = session?.user?.role || 'user';
+  const isAdmin = ['admin', 'superadmin'].includes(userRole as string);
 
   useEffect(() => {
+    // Redirect if not authenticated
+    if (status === 'unauthenticated') {
+      router.push('/auth/signin');
+    }
+    
+    // Set greeting based on time of day
     const hours = new Date().getHours();
     if (hours < 12) {
       setGreeting('Good morning');
@@ -19,7 +31,7 @@ const Dashboard = () => {
     } else {
       setGreeting('Good evening');
     }
-  }, []);
+  }, [status, router]);
 
   if (isLoading) {
     return (
@@ -33,8 +45,7 @@ const Dashboard = () => {
   }
 
   if (!isAuthenticated) {
-    router.push('/auth/signin');
-    return null;
+    return null; // Will redirect in useEffect
   }
 
   const RoleBasedGreeting = () => {
@@ -48,7 +59,7 @@ const Dashboard = () => {
       case 'admin':
         return (
           <p className="text-green-400">
-            You have admin privileges. You can manage most features except system settings.
+            You have admin privileges. You can manage members and content.
           </p>
         );
       case 'member':
@@ -70,8 +81,16 @@ const Dashboard = () => {
     <div className="min-h-screen bg-black px-4 py-12 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-white">Dashboard</h1>
-          <LogoutButton variant="secondary" />
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-indigo-500 bg-clip-text text-transparent">Dashboard</h1>
+          <div className="flex space-x-4">
+            <Link 
+              href="/"
+              className="rounded-md bg-gray-800 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+            >
+              Home
+            </Link>
+            <LogoutButton variant="secondary" />
+          </div>
         </div>
         
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-8 shadow-lg">
@@ -82,7 +101,14 @@ const Dashboard = () => {
               </h1>
               <p className="mt-1 text-gray-400">
                 You are logged in as{' '}
-                <span className="font-semibold text-blue-500">{userRole}</span>
+                <span className={`font-semibold ${
+                  userRole === 'superadmin' ? 'text-purple-500' : 
+                  userRole === 'admin' ? 'text-blue-500' : 
+                  userRole === 'member' ? 'text-green-500' : 
+                  'text-gray-500'
+                }`}>
+                  {userRole}
+                </span>
               </p>
               <div className="mt-4">
                 <RoleBasedGreeting />
@@ -122,27 +148,30 @@ const Dashboard = () => {
               <h2 className="text-xl font-semibold text-white">Actions</h2>
               <div className="mt-4 space-y-4">
                 {userRole === 'superadmin' && (
-                  <button 
-                    onClick={() => router.push('/dashboard/superadmin')}
-                    className="w-full rounded-md bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700"
-                  >
-                    Super Admin Panel
-                  </button>
+                  <Link href="/dashboard/superadmin">
+                    <button 
+                      className="w-full rounded-md bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700"
+                    >
+                      Super Admin Panel
+                    </button>
+                  </Link>
                 )}
-                {(userRole === 'superadmin' || userRole === 'admin') && (
-                  <button 
-                    onClick={() => router.push('/dashboard/admin')}
-                    className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                  >
-                    Admin Panel
-                  </button>
+                {isAdmin && (
+                  <Link href="/dashboard/admin">
+                    <button 
+                      className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                    >
+                      Admin Panel
+                    </button>
+                  </Link>
                 )}
-                <button 
-                  onClick={() => router.push('/profile')}
-                  className="w-full rounded-md bg-gray-700 px-4 py-2 text-sm font-medium text-white hover:bg-gray-600"
-                >
-                  Edit Profile
-                </button>
+                <Link href="/profile">
+                  <button 
+                    className="w-full rounded-md bg-gray-700 px-4 py-2 text-sm font-medium text-white hover:bg-gray-600"
+                  >
+                    Edit Profile
+                  </button>
+                </Link>
               </div>
             </div>
           </div>

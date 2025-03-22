@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export type UserRole = 'user' | 'member' | 'admin' | 'superadmin';
+export type ClubType = 'IEEE' | 'ACM' | 'AWS' | 'GDG' | 'STIC' | '';
 
 export interface IUser extends Document {
   name: string;
@@ -8,6 +9,8 @@ export interface IUser extends Document {
   password?: string;
   image?: string;
   role: UserRole;
+  club: ClubType;
+  creditScore: number;
   emailVerified?: Date;
 }
 
@@ -32,6 +35,15 @@ const UserSchema = new Schema<IUser>(
       type: String,
       enum: ['user', 'member', 'admin', 'superadmin'],
       default: 'user',
+    },
+    club: {
+      type: String,
+      enum: ['IEEE', 'ACM', 'AWS', 'GDG', 'STIC', ''],
+      default: '',
+    },
+    creditScore: {
+      type: Number,
+      default: 0,
     },
     emailVerified: {
       type: Date,

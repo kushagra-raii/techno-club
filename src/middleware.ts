@@ -17,8 +17,8 @@ export async function middleware(request: NextRequest) {
   
   // Check if user is trying to access auth pages while logged in
   if (token && path.startsWith('/auth/')) {
-    // Redirect authenticated users from auth pages to dashboard
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    // Redirect authenticated users from auth pages to homepage instead of dashboard
+    return NextResponse.redirect(new URL('/', request.url));
   }
   
   // For protected routes, check authentication
@@ -30,19 +30,24 @@ export async function middleware(request: NextRequest) {
     
     const userRole = token.role as UserRole;
     
+    // For base dashboard path, only allow admins and superadmins
+    if (path === '/dashboard' && !['admin', 'superadmin'].includes(userRole)) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+    
     // Check admin routes
     if (adminRoutes.some(route => path.startsWith(route)) && !['admin', 'superadmin'].includes(userRole)) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
+      return NextResponse.redirect(new URL('/', request.url));
     }
     
     // Check superadmin routes
     if (superadminRoutes.some(route => path.startsWith(route)) && userRole !== 'superadmin') {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
+      return NextResponse.redirect(new URL('/', request.url));
     }
   }
   
-  // If user is authenticated and role is not 'user'
-  if (token && token.role !== 'user' && publicRoutes.includes(path)) {
+  // Only redirect admin and superadmin roles from public routes to dashboard
+  if (token && ['admin', 'superadmin'].includes(token.role as UserRole) && publicRoutes.includes(path)) {
     // Redirect to dashboard
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
