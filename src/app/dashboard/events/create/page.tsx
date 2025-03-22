@@ -38,6 +38,7 @@ const CreateEventPage = () => {
   const [form, setForm] = useState<FormState>(initialForm);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
   const [previewImage, setPreviewImage] = useState('');
   const [userRole, setUserRole] = useState('');
   const [userClub, setUserClub] = useState('');
@@ -53,9 +54,9 @@ const CreateEventPage = () => {
     
     // Get user role and club from session
     if (session?.user) {
-      // @ts-ignore - custom session properties
+      // @ts-expect-error - session.user.role is not typed in the default NextAuth types
       const role = session.user.role as string || 'user';
-      // @ts-ignore
+      // @ts-expect-error - session.user.club is not typed in the default NextAuth types
       const club = session.user.club as string || '';
       
       setUserRole(role);
@@ -129,6 +130,80 @@ const CreateEventPage = () => {
     }
   };
 
+  const generateAIDescription = async () => {
+    try {
+      setAiLoading(true);
+      setError('');
+      
+      // Check if we have event name and club at minimum
+      if (!form.name || !form.club) {
+        throw new Error('Please enter event name and select a club to generate a description');
+      }
+      
+      // Prepare prompt for OpenAI
+      const prompt = `Generate a compelling, detailed description for a college tech event with the following details:
+      
+Event Name: ${form.name}
+Hosting Club: ${form.club}
+${form.location ? `Location: ${form.location}` : ''}
+${form.startDate ? `Start Date: ${new Date(form.startDate).toLocaleString()}` : ''}
+${form.endDate ? `End Date: ${new Date(form.endDate).toLocaleString()}` : ''}
+${form.ticketPrice > 0 ? `Ticket Price: ₹${form.ticketPrice}` : 'Free Entry'}
+${form.capacity ? `Capacity: ${form.capacity} attendees` : ''}
+${form.requireApproval ? 'Requires approval for registration' : ''}
+
+The description should be engaging, informative, and highlight what attendees can expect from the event. Make it around 3-4 paragraphs.`;
+
+      // Call OpenAI API
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer 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`
+        },
+        body: JSON.stringify({
+          model: 'gpt-3.5-turbo',
+          messages: [
+            { 
+              role: 'system', 
+              content: 'You are an experienced event coordinator for tech events in a college. Write engaging and professional event descriptions.' 
+            },
+            { 
+              role: 'user', 
+              content: prompt 
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 500
+        })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || 'Failed to generate description');
+      }
+      
+      const data = await response.json();
+      const generatedText = data.choices[0]?.message?.content?.trim();
+      
+      if (!generatedText) {
+        throw new Error('No description was generated');
+      }
+      
+      // Update the form with the generated description
+      setForm(prev => ({
+        ...prev,
+        description: generatedText
+      }));
+      
+    } catch (err: unknown) {
+      const error = err as Error;
+      setError(error.message || 'Failed to generate description');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     
@@ -172,8 +247,9 @@ const CreateEventPage = () => {
       router.push('/dashboard/events');
       router.refresh();
       
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
+    } catch (err: unknown) {
+      const error = err as Error;
+      setError(error.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -265,22 +341,6 @@ const CreateEventPage = () => {
               </select>
               <p className="mt-1 text-sm text-gray-400">{getClubHelpText()}</p>
             </div>
-          </div>
-          
-          <div className="mt-6">
-            <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-1">
-              Description*
-            </label>
-            <textarea
-              id="description"
-              name="description"
-              value={form.description}
-              onChange={handleChange}
-              rows={5}
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400"
-              placeholder="Describe what your event is about, what attendees can expect, etc."
-              required
-            />
           </div>
         </div>
         
@@ -451,6 +511,60 @@ const CreateEventPage = () => {
               </button>
             </div>
           )}
+        </div>
+        
+        {/* Description Section - Moved to the end */}
+        <div className="bg-gray-800 rounded-xl shadow-md p-8 border border-gray-700">
+          <h2 className="text-2xl font-semibold mb-6 text-indigo-400 flex items-center">
+            <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+            </svg>
+            Event Description
+          </h2>
+          
+          <div>
+            <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-1 flex justify-between items-center">
+              <span>Description*</span>
+              <button
+                type="button"
+                onClick={generateAIDescription}
+                disabled={aiLoading}
+                className={`inline-flex items-center px-3 py-1.5 text-sm font-medium text-white rounded-md ${
+                  aiLoading 
+                    ? 'bg-purple-700 opacity-70 cursor-not-allowed' 
+                    : 'bg-purple-600 hover:bg-purple-500'
+                }`}
+              >
+                {aiLoading ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Generating...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4 mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    <span>Generate with AI</span>
+                  </>
+                )}
+              </button>
+            </label>
+            <textarea
+              id="description"
+              name="description"
+              value={form.description}
+              onChange={handleChange}
+              rows={7}
+              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400"
+              placeholder="Describe what your event is about, what attendees can expect, etc."
+              required
+            />
+            <p className="mt-1 text-sm text-gray-400">Fill in all event details above for better AI-generated descriptions</p>
+          </div>
         </div>
         
         {/* Submit Button */}

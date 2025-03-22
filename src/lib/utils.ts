@@ -11,23 +11,31 @@ export function cn(...inputs: ClassValue[]) {
 /**
  * Formats a date string into a more readable format
  */
-export function formatDate(dateString: string): string {
+export const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
-  
-  // Check if date is valid
-  if (isNaN(date.getTime())) {
-    return 'Invalid date';
-  }
-
-  // Format options
   const options: Intl.DateTimeFormatOptions = {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: true,
   };
-
+  
   return date.toLocaleDateString('en-US', options);
-} 
+};
+
+export const loadScript = (src: string): Promise<boolean> => {
+  return new Promise((resolve) => {
+    const script = document.createElement("script");
+    script.src = src;
+    script.onload = () => {
+      resolve(true);
+    };
+    script.onerror = () => {
+      resolve(false);
+    };
+    document.body.appendChild(script);
+  });
+}; 
