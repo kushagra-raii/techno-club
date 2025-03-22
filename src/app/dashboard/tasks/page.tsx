@@ -7,15 +7,91 @@ import TaskForm from '@/components/TaskForm';
 import TasksList from '@/components/TasksList';
 import MemberRankings from '@/components/MemberRankings';
 
+// Define the Task type
+interface Task {
+  _id: string;
+  title: string;
+  description: string;
+  credits: number;
+  status: 'pending' | 'in-progress' | 'completed' | 'verified';
+  priority: 'low' | 'medium' | 'high';
+  isVerified?: boolean;
+  createdBy: {
+    _id: string;
+    name: string;
+    email: string;
+    role: string;
+    club: string;
+  };
+  assignedTo: {
+    _id: string;
+    name: string;
+    email: string;
+    role: string;
+    club: string;
+  };
+  dueDate?: string;
+  completedAt?: string;
+  verifiedAt?: string;
+  club?: string;
+  isGlobal: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Task data type for API operations
+interface TaskData {
+  title: string;
+  description: string;
+  credits: number;
+  priority: string;
+  assignedTo: string;
+  dueDate?: string;
+  status: string;
+  isGlobal?: boolean;
+}
+
+// Function to get gradient based on credit score
+const getCreditGradient = (creditScore: number): string => {
+  if (creditScore >= 80) {
+    // High credits: purple to gold gradient
+    return 'from-purple-500 to-amber-400';
+  } else if (creditScore >= 50) {
+    // Medium credits: indigo to purple gradient
+    return 'from-indigo-500 to-purple-500';
+  } else if (creditScore >= 25) {
+    // Low credits: blue to indigo gradient
+    return 'from-blue-500 to-indigo-500';
+  } else {
+    // Very low credits: teal to blue gradient
+    return 'from-teal-500 to-blue-500';
+  }
+};
+
+// Function to get credit level text based on credit score
+const getCreditLevel = (creditScore: number): string => {
+  if (creditScore >= 80) return 'Expert';
+  if (creditScore >= 50) return 'Advanced';
+  if (creditScore >= 25) return 'Intermediate';
+  return 'Beginner';
+};
+
 export default function TasksPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [isCreatingTask, setIsCreatingTask] = useState(false);
-  const [editingTask, setEditingTask] = useState<any>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [activeTab, setActiveTab] = useState('tasks');
   const [taskViewFilter, setTaskViewFilter] = useState('all');
+
+  // Credit score from session or default to 0
+  const userCreditScore = session?.user?.creditScore || 0;
+  
+  // Get gradient classes based on user's credit score
+  const creditGradient = getCreditGradient(userCreditScore);
+  const creditLevel = getCreditLevel(userCreditScore);
 
   // If user is a member, automatically filter to their tasks
   useEffect(() => {
@@ -48,7 +124,7 @@ export default function TasksPage() {
   const isAdminOrHigher = ['admin', 'superadmin'].includes(userRole);
   const isMember = userRole === 'member';
 
-  const handleCreateTask = async (taskData: Record<string, any>) => {
+  const handleCreateTask = async (taskData: TaskData) => {
     try {
       setErrorMessage('');
       
@@ -86,7 +162,7 @@ export default function TasksPage() {
     }
   };
 
-  const handleUpdateTask = async (taskData: Record<string, any>) => {
+  const handleUpdateTask = async (taskData: TaskData) => {
     if (!editingTask?._id) {
       setErrorMessage('No task selected for update');
       return;
@@ -253,7 +329,7 @@ export default function TasksPage() {
                       
                       <TasksList 
                         filterByStatus={taskViewFilter === 'all' || taskViewFilter === 'assignedToMe' ? undefined : taskViewFilter}
-                        onTaskSelect={(task) => setEditingTask(task)}
+                        onTaskSelect={(task) => setEditingTask(task as Task)}
                         assignedToMe={taskViewFilter === 'assignedToMe'}
                       />
                     </div>
@@ -272,42 +348,42 @@ export default function TasksPage() {
               <div className="space-y-6">
                 <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-lg shadow-lg border border-gray-700 overflow-hidden p-6">
                   <div className="mb-6">
-                    <h2 className="text-xl font-semibold text-white mb-4 flex items-center bg-gradient-to-r from-purple-400 to-indigo-500 bg-clip-text text-transparent">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-indigo-400" viewBox="0 0 20 20" fill="currentColor">
+                    <h2 className={`text-xl font-semibold bg-gradient-to-r ${creditGradient} bg-clip-text text-transparent mb-4 flex items-center`}>
+                      <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 mr-2 text-${creditGradient.split('-')[1]}-400`} viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
                       Your Credit Status
                     </h2>
                     
-                    <div className="bg-gray-800/50 rounded-lg p-6">
+                    <div className={`bg-gray-800/50 rounded-lg p-6 border border-${creditGradient.split('-')[1]}-900/30`}>
                       <div className="flex flex-col md:flex-row justify-between items-center">
                         <div className="mb-4 md:mb-0">
                           <span className="text-gray-400 text-sm block mb-1">Current Credits:</span>
-                          <span className="text-2xl font-bold text-purple-400">
-                            {session?.user?.creditScore || 0} credits
+                          <span className={`text-2xl font-bold text-${creditGradient.split('-')[1]}-400`}>
+                            {userCreditScore} credits
                           </span>
                         </div>
                         
                         <div className="mb-4 md:mb-0">
-                          <span className="text-gray-400 text-sm block mb-1">Your Rank:</span>
-                          <span className="text-lg font-semibold text-indigo-300">
-                            #{/* Placeholder rank */} <span className="text-gray-400 text-sm">in your club</span>
+                          <span className="text-gray-400 text-sm block mb-1">Credit Level:</span>
+                          <span className={`text-lg font-semibold bg-gradient-to-r ${creditGradient} bg-clip-text text-transparent`}>
+                            {creditLevel}
                           </span>
                         </div>
                         
                         <div>
-                          <span className="text-gray-400 text-sm block mb-1">Credit Level:</span>
+                          <span className="text-gray-400 text-sm block mb-1">Progress:</span>
                           <div className="flex items-center space-x-2">
                             <div className="w-24 h-3 bg-gray-700 rounded-full overflow-hidden">
                               <div
-                                className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full"
+                                className={`h-full bg-gradient-to-r ${creditGradient} rounded-full`}
                                 style={{
-                                  width: `${Math.min(100, ((session?.user?.creditScore || 0) / 100) * 100)}%`
+                                  width: `${Math.min(100, (userCreditScore / 100) * 100)}%`
                                 }}
                               ></div>
                             </div>
                             <span className="text-sm text-gray-400">
-                              {session?.user?.creditScore || 0}/100
+                              {userCreditScore}/100
                             </span>
                           </div>
                         </div>
@@ -329,7 +405,7 @@ export default function TasksPage() {
                         onClick={() => setTaskViewFilter('assignedToMe')}
                         className={`px-3 py-1.5 text-sm rounded-l-md ${
                           taskViewFilter === 'assignedToMe' 
-                            ? 'bg-indigo-600 text-white' 
+                            ? `bg-gradient-to-r ${creditGradient} text-white` 
                             : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                         }`}
                       >
@@ -339,7 +415,7 @@ export default function TasksPage() {
                         onClick={() => setTaskViewFilter('pending')}
                         className={`px-3 py-1.5 text-sm ${
                           taskViewFilter === 'pending' 
-                            ? 'bg-indigo-600 text-white' 
+                            ? `bg-gradient-to-r ${creditGradient} text-white` 
                             : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                         }`}
                       >
@@ -349,7 +425,7 @@ export default function TasksPage() {
                         onClick={() => setTaskViewFilter('in-progress')}
                         className={`px-3 py-1.5 text-sm ${
                           taskViewFilter === 'in-progress' 
-                            ? 'bg-indigo-600 text-white' 
+                            ? `bg-gradient-to-r ${creditGradient} text-white` 
                             : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                         }`}
                       >
@@ -359,7 +435,7 @@ export default function TasksPage() {
                         onClick={() => setTaskViewFilter('completed')}
                         className={`px-3 py-1.5 text-sm rounded-r-md ${
                           taskViewFilter === 'completed' || taskViewFilter === 'verified'
-                            ? 'bg-indigo-600 text-white' 
+                            ? `bg-gradient-to-r ${creditGradient} text-white` 
                             : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                         }`}
                       >
