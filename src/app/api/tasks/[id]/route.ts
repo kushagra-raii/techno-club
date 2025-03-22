@@ -75,7 +75,7 @@ export async function GET(
       // Check if assignedTo is a populated object with _id or just an id
       let assignedToId = '';
       if (typeof task.assignedTo === 'object' && task.assignedTo !== null) {
-        assignedToId = (task.assignedTo as any)._id?.toString() || '';
+        assignedToId = (task.assignedTo as { _id?: mongoose.Types.ObjectId })._id?.toString() || '';
       } else {
         assignedToId = task.assignedTo?.toString() || '';
       }
@@ -90,10 +90,11 @@ export async function GET(
 
     console.log(`GET /api/tasks/${params.id} - Forbidden: User role ${userRole} not allowed`);
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  } catch (error: any) {
-    console.error(`GET /api/tasks/${params.id} - Server error:`, error);
-    console.error(`GET /api/tasks/${params.id} - Error stack:`, error.stack);
-    return NextResponse.json({ error: 'Server error', message: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error(`GET /api/tasks/${params.id} - Server error:`, err);
+    console.error(`GET /api/tasks/${params.id} - Error stack:`, err.stack);
+    return NextResponse.json({ error: 'Server error', message: err.message }, { status: 500 });
   }
 }
 
@@ -159,31 +160,37 @@ export async function PATCH(
         }
       }
       
-      // Admin can only update tasks in their club, cannot mark verified directly
+      // Admin can only update tasks in their club
       if (userRole === 'admin') {
         const taskClub = task.club?.toString() || '';
         if (taskClub !== userClub) {
           console.log(`PATCH /api/tasks/${params.id} - Forbidden: Admin can only update tasks in their club`);
           return NextResponse.json({ error: 'You can only update tasks in your club' }, { status: 403 });
         }
-        
-        if (data.isVerified && !task.isVerified) {
-          console.log(`PATCH /api/tasks/${params.id} - Admin verifying task`);
-          // If admin is verifying a completed task, update user's credit score
-          if (task.status === 'completed' || data.status === 'completed') {
-            const assignedUser = await User.findById(task.assignedTo);
-            if (assignedUser) {
-              const newCreditScore = (assignedUser.creditScore || 0) + task.credits;
-              console.log(`PATCH /api/tasks/${params.id} - Updating user credit score from ${assignedUser.creditScore} to ${newCreditScore}`);
-              await User.findByIdAndUpdate(task.assignedTo, { 
-                $inc: { creditScore: task.credits } 
-              });
-            }
-          }
-        }
       }
       
       task.status = data.status;
+    }
+    
+    // Handle task verification and credit assignment
+    if (data.isVerified && !task.isVerified && ['admin', 'superadmin'].includes(userRole)) {
+      console.log(`PATCH /api/tasks/${params.id} - ${userRole} verifying task`);
+      
+      // When verifying a completed task, update user's credit score
+      if (task.status === 'completed' || data.status === 'completed') {
+        const assignedUser = await User.findById(task.assignedTo);
+        if (assignedUser) {
+          const newCreditScore = (assignedUser.creditScore || 0) + task.credits;
+          console.log(`PATCH /api/tasks/${params.id} - Updating user credit score from ${assignedUser.creditScore} to ${newCreditScore}`);
+          await User.findByIdAndUpdate(task.assignedTo, { 
+            $inc: { creditScore: task.credits } 
+          });
+        }
+      }
+      
+      // Set verification timestamp
+      task.verifiedAt = new Date();
+      task.isVerified = true;
     }
     
     // Only admins and superadmins can update other task properties
@@ -201,7 +208,12 @@ export async function PATCH(
       if (data.priority) task.priority = data.priority;
       if (data.credits) task.credits = data.credits;
       if (data.dueDate) task.dueDate = new Date(data.dueDate);
-      if (data.isVerified !== undefined) task.isVerified = data.isVerified;
+      
+      // Update isVerified separately for the case where verification is going from true to false
+      if (data.isVerified !== undefined && data.isVerified === false) {
+        task.isVerified = false;
+        task.verifiedAt = undefined;
+      }
     }
     
     console.log(`PATCH /api/tasks/${params.id} - Saving updated task`);
@@ -209,10 +221,11 @@ export async function PATCH(
     console.log(`PATCH /api/tasks/${params.id} - Task updated successfully`);
     
     return NextResponse.json(task);
-  } catch (error: any) {
-    console.error(`PATCH /api/tasks/${params.id} - Server error:`, error);
-    console.error(`PATCH /api/tasks/${params.id} - Error stack:`, error.stack);
-    return NextResponse.json({ error: 'Server error', message: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error(`PATCH /api/tasks/${params.id} - Server error:`, err);
+    console.error(`PATCH /api/tasks/${params.id} - Error stack:`, err.stack);
+    return NextResponse.json({ error: 'Server error', message: err.message }, { status: 500 });
   }
 }
 
@@ -286,9 +299,10 @@ export async function DELETE(
     console.log(`DELETE /api/tasks/${params.id} - Task deleted successfully`);
     
     return NextResponse.json({ message: 'Task deleted successfully' });
-  } catch (error: any) {
-    console.error(`DELETE /api/tasks/${params.id} - Server error:`, error);
-    console.error(`DELETE /api/tasks/${params.id} - Error stack:`, error.stack);
-    return NextResponse.json({ error: 'Server error', message: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error(`DELETE /api/tasks/${params.id} - Server error:`, err);
+    console.error(`DELETE /api/tasks/${params.id} - Error stack:`, err.stack);
+    return NextResponse.json({ error: 'Server error', message: err.message }, { status: 500 });
   }
 }

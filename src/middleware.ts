@@ -30,8 +30,8 @@ export async function middleware(request: NextRequest) {
     
     const userRole = token.role as UserRole;
     
-    // For base dashboard path, only allow admins and superadmins
-    if (path === '/dashboard' && !['admin', 'superadmin'].includes(userRole)) {
+    // For base dashboard path, only allow members, admins and superadmins
+    if (path === '/dashboard' && !['member', 'admin', 'superadmin'].includes(userRole)) {
       return NextResponse.redirect(new URL('/', request.url));
     }
     
@@ -46,8 +46,8 @@ export async function middleware(request: NextRequest) {
     }
   }
   
-  // Only redirect admin and superadmin roles from public routes to dashboard
-  if (token && ['admin', 'superadmin'].includes(token.role as UserRole) && publicRoutes.includes(path)) {
+  // Redirect admin, superadmin and member roles from public routes to dashboard
+  if (token && ['member', 'admin', 'superadmin'].includes(token.role as UserRole) && publicRoutes.includes(path)) {
     // Redirect to dashboard
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }

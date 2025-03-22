@@ -278,87 +278,167 @@ const TasksList: React.FC<TasksListProps> = ({
   }
 
   return (
-    <div className="bg-gray-900 rounded-lg overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-700">
-          <thead className="bg-gray-800">
-            <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Task</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Priority</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Credits</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Due Date</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Assigned To</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-gray-900 divide-y divide-gray-800">
+    <div className="overflow-hidden">
+      {error && (
+        <div className="mb-6 p-4 bg-red-900/50 border border-red-700 text-red-200 rounded-lg">
+          <p>{error}</p>
+        </div>
+      )}
+      
+      {loading ? (
+        <div className="flex justify-center items-center p-8">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-500"></div>
+        </div>
+      ) : tasks.length === 0 ? (
+        <div className="p-6 text-center bg-gray-900/50 rounded-lg border border-gray-800">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+          <p className="text-gray-400 text-lg">No tasks found</p>
+          <p className="text-gray-500 mt-1">Tasks assigned to you will appear here.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="mb-4 flex items-center justify-between flex-wrap gap-2">
+            <div className="text-sm text-gray-400">
+              {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'} found
+            </div>
+            <div className="flex items-center space-x-4">
+              <label className="flex items-center text-sm text-gray-400">
+                <span className="mr-2">Sort by:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="bg-gray-800 text-white rounded-md border border-gray-700 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                >
+                  <option value="dueDate">Due Date</option>
+                  <option value="priority">Priority</option>
+                  <option value="credits">Credits</option>
+                  <option value="status">Status</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 gap-4">
             {getSortedTasks().map((task) => (
-              <tr key={task._id} className="hover:bg-gray-800 cursor-pointer" onClick={() => onTaskSelect && onTaskSelect(task)}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-white">{task.title}</div>
-                  <div className="text-xs text-gray-400">{task.club || 'Global'}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(task.status, task.isVerified)}`}>
-                    {task.isVerified ? 'Verified' : task.status.charAt(0).toUpperCase() + task.status.slice(1)}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`text-sm ${getPriorityColor(task.priority)}`}>
-                    {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
-                  {task.credits}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                  {formatDate(task.dueDate)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-white">{task.assignedTo.name}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <div className="flex space-x-2" onClick={e => e.stopPropagation()}>
-                    {session?.user.role === 'member' && task.assignedTo._id === session.user.id && task.status === 'pending' && !task.isVerified && (
-                      <button 
-                        onClick={() => handleStatusChange(task._id, 'in-progress')}
-                        className="text-blue-500 hover:text-blue-400"
+              <div 
+                key={task._id} 
+                className="bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300"
+              >
+                <div className="p-5">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-lg font-semibold text-white mb-1 flex items-center">
+                        {task.title}
+                        {task.isGlobal && (
+                          <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-indigo-900 text-indigo-200">
+                            Global
+                          </span>
+                        )}
+                      </h3>
+                      <div className="text-sm text-gray-400 mb-2">
+                        Assigned to: <span className="text-gray-300">{task.assignedTo.name}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className={`flex items-center px-2 py-1 rounded-md text-xs font-medium ${getPriorityColor(task.priority)}`}>
+                        {task.priority === 'high' && (
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                        {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+                      </span>
+                      <span className={`px-3 py-1 rounded-md text-xs font-medium ${getStatusColor(task.status, task.isVerified)}`}>
+                        {task.isVerified ? 'Verified' : task.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <p className="text-gray-300 text-sm line-clamp-2">{task.description}</p>
+                  </div>
+                  
+                  <div className="mt-4 pt-4 border-t border-gray-700 grid grid-cols-2 gap-2 text-sm">
+                    <div className="flex flex-col">
+                      <span className="text-gray-500">Due</span>
+                      <span className="text-gray-300">{formatDate(task.dueDate)}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-gray-500">Credits</span>
+                      <span className="text-purple-400 font-semibold">{task.credits} pts</span>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 pt-4 border-t border-gray-700 flex flex-wrap gap-2">
+                    {session?.user?.role !== 'member' && onTaskSelect && (
+                      <button
+                        onClick={() => onTaskSelect(task)}
+                        className="px-3 py-1.5 text-xs bg-indigo-900 hover:bg-indigo-800 text-white rounded-md transition flex items-center"
                       >
-                        Start
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                        </svg>
+                        Edit
                       </button>
                     )}
-                    {session?.user.role === 'member' && task.assignedTo._id === session.user.id && task.status === 'in-progress' && !task.isVerified && (
-                      <button 
-                        onClick={() => handleStatusChange(task._id, 'completed')}
-                        className="text-yellow-500 hover:text-yellow-400"
+                    
+                    {session?.user?.id === task.assignedTo._id && task.status === 'pending' && (
+                      <button
+                        onClick={() => handleStatusChange(task._id, 'in-progress')}
+                        className="px-3 py-1.5 text-xs bg-blue-900 hover:bg-blue-800 text-white rounded-md transition flex items-center"
                       >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                        </svg>
+                        Start Task
+                      </button>
+                    )}
+                    
+                    {session?.user?.id === task.assignedTo._id && task.status === 'in-progress' && (
+                      <button
+                        onClick={() => handleStatusChange(task._id, 'completed')}
+                        className="px-3 py-1.5 text-xs bg-yellow-900 hover:bg-yellow-800 text-white rounded-md transition flex items-center"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
                         Complete
                       </button>
                     )}
-                    {['admin', 'superadmin'].includes(session?.user.role as string) && task.status === 'completed' && !task.isVerified && (
-                      <button 
+                    
+                    {(session?.user?.role === 'admin' || session?.user?.role === 'superadmin' || session?.user?.id === task.createdBy._id) && 
+                     task.status === 'completed' && !task.isVerified && (
+                      <button
                         onClick={() => handleVerifyTask(task._id)}
-                        className="text-green-500 hover:text-green-400"
+                        className="px-3 py-1.5 text-xs bg-green-900 hover:bg-green-800 text-white rounded-md transition flex items-center"
                       >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
                         Verify
                       </button>
                     )}
-                    {['admin', 'superadmin'].includes(session?.user.role as string) && !task.isVerified && (
-                      <button 
+                    
+                    {(session?.user?.role === 'admin' || session?.user?.role === 'superadmin' || session?.user?.id === task.createdBy._id) && (
+                      <button
                         onClick={() => handleDeleteTask(task._id)}
-                        className="text-red-500 hover:text-red-400"
+                        className="px-3 py-1.5 text-xs bg-red-900 hover:bg-red-800 text-white rounded-md transition flex items-center"
                       >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
                         Delete
                       </button>
                     )}
                   </div>
-                </td>
-              </tr>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

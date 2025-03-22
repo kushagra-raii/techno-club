@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import mongoose from 'mongoose';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { connectToDatabase } from '@/lib/mongoose';
-import User from '@/lib/models/User';
 import Task from '@/lib/models/Task';
+import User from '@/lib/models/User';
+import type { ITask } from '@/lib/models/Task';
+import mongoose from 'mongoose';
 
 // ... existing code ...
 
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
       status: status || 'all'
     });
     
-    let query: any = {};
+    const query: Record<string, unknown> = {};
     
     // Apply status filter if provided
     if (status && status !== 'all' && status !== 'verified') {
@@ -67,10 +68,135 @@ export async function GET(req: NextRequest) {
     console.log(`GET /api/tasks - Found ${tasks.length} tasks`);
     
     return NextResponse.json(tasks);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('GET /api/tasks - Server Error:', error);
-    console.error('GET /api/tasks - Error stack:', error.stack);
-    return NextResponse.json({ error: 'Server error', message: error.message }, { status: 500 });
+    const err = error as Error;
+    console.error('GET /api/tasks - Error stack:', err.stack);
+    return NextResponse.json({ error: 'Server error', message: err.message }, { status: 500 });
+  }
+}
+
+// POST - Create a new task
+export async function POST(req: NextRequest) {
+  try {
+    console.log('POST /api/tasks - Creating new task');
+    await connectToDatabase();
+    
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      console.log('POST /api/tasks - Unauthorized: No session found');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    const userRole = session.user.role;
+    const userId = session.user.id;
+    const userClub = session.user.club;
+    
+    // Only allow admins or superadmins to create tasks
+    if (userRole !== 'admin' && userRole !== 'superadmin') {
+      console.log('POST /api/tasks - Unauthorized: Only admins can create tasks');
+      return NextResponse.json({ error: 'Unauthorized: Only admins can create tasks' }, { status: 403 });
+    }
+    
+    console.log('POST /api/tasks - User:', {
+      id: userId,
+      role: userRole,
+      club: userClub
+    });
+    
+    // Parse request body
+    const body = await req.json();
+    console.log('POST /api/tasks - Request body:', body);
+    
+    // Validate required fields
+    const requiredFields = ['title', 'description', 'credits', 'assignedTo', 'priority', 'dueDate'];
+    for (const field of requiredFields) {
+      if (!body[field]) {
+        console.log(`POST /api/tasks - Validation error: Missing required field ${field}`);
+        return NextResponse.json({ error: `Missing required field: ${field}` }, { status: 400 });
+      }
+    }
+    
+    // Validate credit range
+    if (body.credits < 1 || body.credits > 100) {
+      console.log('POST /api/tasks - Validation error: Credits must be between 1 and 100');
+      return NextResponse.json({ error: 'Credits must be between 1 and 100' }, { status: 400 });
+    }
+    
+    // Validate priority
+    if (!['low', 'medium', 'high'].includes(body.priority)) {
+      console.log('POST /api/tasks - Validation error: Invalid priority value');
+      return NextResponse.json({ error: 'Invalid priority value' }, { status: 400 });
+    }
+    
+    // Check if assigned user exists and validation
+    let assignedUser;
+    try {
+      if (!mongoose.Types.ObjectId.isValid(body.assignedTo)) {
+        console.log('POST /api/tasks - Validation error: Invalid assignedTo ID format');
+        return NextResponse.json({ error: 'Invalid assignedTo ID format' }, { status: 400 });
+      }
+      
+      assignedUser = await User.findById(body.assignedTo);
+      if (!assignedUser) {
+        console.log('POST /api/tasks - Validation error: Assigned user not found');
+        return NextResponse.json({ error: 'Assigned user not found' }, { status: 404 });
+      }
+      
+      // Admins can only assign tasks to members of their club
+      if (userRole === 'admin' && assignedUser.club !== userClub) {
+        console.log('POST /api/tasks - Unauthorized: Admins can only assign tasks to members of their club');
+        return NextResponse.json({ 
+          error: 'Unauthorized: Admins can only assign tasks to members of their club' 
+        }, { status: 403 });
+      }
+      
+    } catch (error) {
+      console.error('POST /api/tasks - Error checking assigned user:', error);
+      return NextResponse.json({ error: 'Error validating assigned user' }, { status: 500 });
+    }
+    
+    // Format due date
+    const dueDate = new Date(body.dueDate);
+    if (isNaN(dueDate.getTime())) {
+      console.log('POST /api/tasks - Validation error: Invalid due date format');
+      return NextResponse.json({ error: 'Invalid due date format' }, { status: 400 });
+    }
+    
+    // Prepare task data
+    const taskData: Partial<ITask> = {
+      title: body.title,
+      description: body.description,
+      credits: body.credits,
+      priority: body.priority as 'low' | 'medium' | 'high',
+      dueDate,
+      status: 'pending', // Default status for new tasks
+      createdBy: userId,
+      assignedTo: body.assignedTo,
+      isVerified: false,
+      club: userRole === 'admin' ? userClub : assignedUser.club,
+      isGlobal: userRole === 'superadmin' && body.isGlobal ? true : false,
+    };
+    
+    console.log('POST /api/tasks - Creating task with data:', taskData);
+    
+    // Create the task
+    const newTask = await Task.create(taskData);
+    console.log('POST /api/tasks - Task created:', newTask._id);
+    
+    // Populate references for response
+    const populatedTask = await Task.findById(newTask._id)
+      .populate('assignedTo', 'name email image role club')
+      .populate('createdBy', 'name email image role club');
+      
+    console.log('POST /api/tasks - Task created successfully');
+    
+    return NextResponse.json(populatedTask, { status: 201 });
+  } catch (error: unknown) {
+    console.error('POST /api/tasks - Server error:', error);
+    const err = error as Error;
+    console.error('POST /api/tasks - Error stack:', err.stack);
+    return NextResponse.json({ error: 'Server error', message: err.message }, { status: 500 });
   }
 }
 

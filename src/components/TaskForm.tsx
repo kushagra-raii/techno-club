@@ -189,7 +189,10 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === 'credits' ? parseFloat(value) : value
+    }));
   };
   
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -198,169 +201,201 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
   };
   
   return (
-    <div className="bg-gray-900 rounded-lg p-6">
-      <h2 className="text-xl font-semibold text-white mb-4">
-        {isEditing ? 'Edit Task' : 'Create New Task'}
+    <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-lg p-6 shadow-lg border border-gray-700 mb-8 animate-fadeIn">
+      <h2 className="text-xl font-semibold text-white mb-6 flex items-center bg-gradient-to-r from-purple-400 to-indigo-500 bg-clip-text text-transparent">
+        {isEditing ? (
+          <>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-indigo-400" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+            </svg>
+            Edit Task
+          </>
+        ) : (
+          <>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-indigo-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+            </svg>
+            Create New Task
+          </>
+        )}
       </h2>
       
       {error && (
-        <div className="mb-4 p-3 bg-red-900 text-red-200 rounded-md">
+        <div className="mb-6 p-4 bg-red-900/30 border border-red-700 text-red-200 rounded-lg">
           <p>{error}</p>
         </div>
       )}
       
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">
-              Title
-            </label>
-            <input
-              type="text"
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              className={`w-full px-3 py-2 bg-gray-800 border ${
-                errors.title ? 'border-red-500' : 'border-gray-700'
-              } rounded-md text-white`}
-              placeholder="Task title"
-            />
-            {errors.title && <p className="mt-1 text-sm text-red-500">{errors.title}</p>}
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">
-              Assign To
-            </label>
-            <select
-              name="assignedTo"
-              value={formData.assignedTo}
-              onChange={handleChange}
-              className={`w-full px-3 py-2 bg-gray-800 border ${
-                errors.assignedTo ? 'border-red-500' : 'border-gray-700'
-              } rounded-md text-white`}
-            >
-              <option value="">Select a member</option>
-              {members.length === 0 ? (
-                <option value="" disabled>No members available</option>
-              ) : (
-                members.map(member => (
-                  <option key={member._id} value={member._id}>
-                    {member.name} ({member.email})
-                  </option>
-                ))
-              )}
-            </select>
-            {errors.assignedTo && <p className="mt-1 text-sm text-red-500">{errors.assignedTo}</p>}
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">
-              Credits
-            </label>
-            <input
-              type="number"
-              name="credits"
-              min="1"
-              max="100"
-              value={formData.credits}
-              onChange={handleChange}
-              className={`w-full px-3 py-2 bg-gray-800 border ${
-                errors.credits ? 'border-red-500' : 'border-gray-700'
-              } rounded-md text-white`}
-            />
-            {errors.credits && <p className="mt-1 text-sm text-red-500">{errors.credits}</p>}
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">
-              Priority
-            </label>
-            <select
-              name="priority"
-              value={formData.priority}
-              onChange={handleChange}
-              className={`w-full px-3 py-2 bg-gray-800 border ${
-                errors.priority ? 'border-red-500' : 'border-gray-700'
-              } rounded-md text-white`}
-            >
-              <option value="">Select priority</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-            </select>
-            {errors.priority && <p className="mt-1 text-sm text-red-500">{errors.priority}</p>}
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">
-              Due Date
-            </label>
-            <input
-              type="date"
-              name="dueDate"
-              value={formData.dueDate}
-              onChange={handleChange}
-              className={`w-full px-3 py-2 bg-gray-800 border ${
-                errors.dueDate ? 'border-red-500' : 'border-gray-700'
-              } rounded-md text-white`}
-            />
-            {errors.dueDate && <p className="mt-1 text-sm text-red-500">{errors.dueDate}</p>}
-          </div>
-          
-          {isSuperAdmin && (
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                name="isGlobal"
-                id="isGlobal"
-                checked={formData.isGlobal}
-                onChange={handleCheckboxChange}
-                className="h-4 w-4 text-blue-500 border-gray-700 rounded"
-              />
-              <label htmlFor="isGlobal" className="ml-2 block text-sm text-gray-400">
-                Global Task (visible to all clubs)
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-indigo-300 mb-1">
+                Title <span className="text-red-400">*</span>
               </label>
+              <input
+                type="text"
+                name="title"
+                value={formData.title}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 bg-gray-800/80 border ${
+                  errors.title ? 'border-red-500' : 'border-gray-700 focus:border-indigo-500'
+                } rounded-md text-white transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-indigo-500`}
+                placeholder="Task title"
+              />
+              {errors.title && <p className="mt-1 text-sm text-red-500">{errors.title}</p>}
             </div>
-          )}
+            
+            <div>
+              <label className="block text-sm font-medium text-indigo-300 mb-1">
+                Description <span className="text-red-400">*</span>
+              </label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                rows={4}
+                className={`w-full px-3 py-2 bg-gray-800/80 border ${
+                  errors.description ? 'border-red-500' : 'border-gray-700 focus:border-indigo-500'
+                } rounded-md text-white transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-indigo-500`}
+                placeholder="Describe the task details..."
+              ></textarea>
+              {errors.description && <p className="mt-1 text-sm text-red-500">{errors.description}</p>}
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-indigo-300 mb-1">
+                Assign To <span className="text-red-400">*</span>
+              </label>
+              <select
+                name="assignedTo"
+                value={formData.assignedTo}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 bg-gray-800/80 border ${
+                  errors.assignedTo ? 'border-red-500' : 'border-gray-700 focus:border-indigo-500'
+                } rounded-md text-white transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-indigo-500`}
+              >
+                <option value="">Select a member</option>
+                {members.length === 0 ? (
+                  <option value="" disabled>No members available</option>
+                ) : (
+                  members.map(member => (
+                    <option key={member._id} value={member._id}>
+                      {member.name} ({member.email})
+                    </option>
+                  ))
+                )}
+              </select>
+              {errors.assignedTo && <p className="mt-1 text-sm text-red-500">{errors.assignedTo}</p>}
+            </div>
+          </div>
           
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-400 mb-1">
-              Description
-            </label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              rows={4}
-              className={`w-full px-3 py-2 bg-gray-800 border ${
-                errors.description ? 'border-red-500' : 'border-gray-700'
-              } rounded-md text-white`}
-              placeholder="Task description"
-            ></textarea>
-            {errors.description && <p className="mt-1 text-sm text-red-500">{errors.description}</p>}
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-indigo-300 mb-1">
+                Priority <span className="text-red-400">*</span>
+              </label>
+              <select
+                name="priority"
+                value={formData.priority}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 bg-gray-800/80 border ${
+                  errors.priority ? 'border-red-500' : 'border-gray-700 focus:border-indigo-500'
+                } rounded-md text-white transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-indigo-500`}
+              >
+                <option value="">Select priority</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+              {errors.priority && <p className="mt-1 text-sm text-red-500">{errors.priority}</p>}
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-indigo-300 mb-1">
+                Credits <span className="text-red-400">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  name="credits"
+                  value={formData.credits}
+                  onChange={handleChange}
+                  min="1"
+                  max="100"
+                  step="0.1"
+                  className={`w-full px-3 py-2 bg-gray-800/80 border ${
+                    errors.credits ? 'border-red-500' : 'border-gray-700 focus:border-indigo-500'
+                  } rounded-md text-white transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-indigo-500`}
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <span className="text-gray-400 text-sm">pts</span>
+                </div>
+              </div>
+              {errors.credits && <p className="mt-1 text-sm text-red-500">{errors.credits}</p>}
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-indigo-300 mb-1">
+                Due Date <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="date"
+                name="dueDate"
+                value={formData.dueDate}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 bg-gray-800/80 border ${
+                  errors.dueDate ? 'border-red-500' : 'border-gray-700 focus:border-indigo-500'
+                } rounded-md text-white transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-indigo-500`}
+              />
+              {errors.dueDate && <p className="mt-1 text-sm text-red-500">{errors.dueDate}</p>}
+            </div>
+            
+            {isSuperAdmin && (
+              <div className="mt-4">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    name="isGlobal"
+                    checked={formData.isGlobal}
+                    onChange={handleCheckboxChange}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-700 rounded bg-gray-800"
+                  />
+                  <span className="ml-2 text-sm text-gray-300">
+                    Global Task (available across all clubs)
+                  </span>
+                </label>
+              </div>
+            )}
           </div>
         </div>
         
-        <div className="mt-6 flex items-center justify-end space-x-4">
+        <div className="flex justify-end space-x-4 pt-4 border-t border-gray-700">
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 bg-gray-800 text-gray-300 rounded-md hover:bg-gray-700"
-            disabled={isSubmitting}
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors duration-200"
           >
             Cancel
           </button>
-          
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
             disabled={isSubmitting}
+            className={`px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-md transition-colors duration-200 shadow-md flex items-center ${
+              isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
+            }`}
           >
-            {isSubmitting ? 
-              'Processing...' : 
-              isEditing ? 'Update Task' : 'Create Task'
-            }
+            {isSubmitting ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Processing...
+              </>
+            ) : (
+              <>{isEditing ? 'Update Task' : 'Create Task'}</>
+            )}
           </button>
         </div>
       </form>
