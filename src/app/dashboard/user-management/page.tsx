@@ -48,14 +48,21 @@ export default function UserManagementPage() {
       // Superadmins use the users endpoint to see all users
       // Regular admins use the members endpoint to see only members/users
       const endpoint = isSuperAdmin ? '/api/admin/users' : '/api/admin/members';
+      console.log('Fetching users from endpoint:', endpoint);
+      
       const response = await fetch(endpoint);
       
       if (!response.ok) {
+        console.error('Response not OK:', response.status, response.statusText);
         throw new Error('Failed to fetch users');
       }
       
       const data = await response.json();
-      setUsers(data.users);
+      console.log('Fetched data:', data);
+      
+      // Handle both formats - array or object with users property
+      const usersList = Array.isArray(data) ? data : data.users || [];
+      setUsers(usersList);
     } catch (err) {
       setError('Failed to load users. Please try again later.');
       console.error(err);

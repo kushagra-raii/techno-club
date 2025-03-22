@@ -162,14 +162,20 @@ const SuperAdminDashboard: React.FC = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
+      // Fetch users data
       const response = await fetch('/api/admin/users');
       
       if (!response.ok) {
+        console.error('Response not OK:', response.status, response.statusText);
         throw new Error('Failed to fetch users');
       }
       
       const data = await response.json();
-      setUsers(data.users);
+      console.log('Fetched users data:', data);
+      
+      // Handle both formats - array or object with users property
+      const usersList = Array.isArray(data) ? data : data.users || [];
+      setUsers(usersList);
     } catch (err) {
       setError('Error fetching users. Please try again.');
       console.error(err);
