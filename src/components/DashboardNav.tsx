@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useSession} from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 
 export default function DashboardNav() {
   const pathname: string = usePathname();
@@ -96,6 +96,10 @@ export default function DashboardNav() {
     }
   ];
 
+  const handleLogout = () => {
+    signOut({ callbackUrl: '/' });
+  };
+
   return (
     <nav className="bg-gray-900 text-white p-4 rounded-lg mb-8">
       <ul className="flex flex-wrap gap-2">
@@ -116,6 +120,19 @@ export default function DashboardNav() {
             </li>
           )
         )}
+        <li>
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-4 py-2 rounded-md transition-colors hover:bg-red-700 bg-red-800"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            Logout
+          </button>
+        </li>
       </ul>
     </nav>
   );
