@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import MemberRankings from '@/components/MemberRankings';
 
 type UserRole = 'user' | 'member' | 'admin' | 'superadmin';
 type ClubType = 'IEEE' | 'ACM' | 'AWS' | 'GDG' | 'STIC' | '';
@@ -149,6 +150,7 @@ const SuperAdminDashboard: React.FC = () => {
     club: '',
     creditScore: 0,
   });
+  const [activeTab, setActiveTab] = useState<'users' | 'rankings'>('users');
 
   useEffect(() => {
     // Redirect if not authenticated or not a super admin
@@ -165,14 +167,20 @@ const SuperAdminDashboard: React.FC = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
+      // Fetch users data
       const response = await fetch('/api/admin/users');
       
       if (!response.ok) {
+        console.error('Response not OK:', response.status, response.statusText);
         throw new Error('Failed to fetch users');
       }
       
       const data = await response.json();
-      setUsers(data.users);
+      console.log('Fetched users data:', data);
+      
+      // Handle both formats - array or object with users property
+      const usersList = Array.isArray(data) ? data : data.users || [];
+      setUsers(usersList);
     } catch (err) {
       setError('Error fetching users. Please try again.');
       console.error(err);
@@ -362,169 +370,194 @@ const SuperAdminDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white flex">
-      {/* Sidebar for desktop */}
+    <div className="flex min-h-screen bg-black">
       <Sidebar />
       
-      {/* Mobile header with menu */}
-      <div className="md:hidden w-full fixed top-0 left-0 bg-gray-900 z-10 px-4 py-3 shadow-md flex justify-between items-center">
-        <h1 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-indigo-500 bg-clip-text text-transparent">
-          Super Admin
-        </h1>
-        <div className="flex items-center space-x-3">
-          <Link href="/dashboard" className="text-gray-300 hover:text-white">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-            </svg>
-          </Link>
-        </div>
-      </div>
-      
-      {/* Main content */}
-      <div className="flex-1 p-6 md:p-8 md:ml-64 mt-12 md:mt-0">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-indigo-500 bg-clip-text text-transparent">
-              Super Admin Dashboard
-            </h1>
-            <div className="hidden md:flex space-x-4">
-              <Link 
-                href="/dashboard" 
-                className="px-4 py-2 rounded-md bg-gray-800 text-white hover:bg-gray-700 transition-colors"
-              >
-                Back to Dashboard
-              </Link>
-              <button
-                onClick={fetchUsers}
-                className="px-4 py-2 rounded-md bg-indigo-600 hover:bg-indigo-700 transition-colors text-white"
-                disabled={loading}
-              >
-                Refresh Users
-              </button>
-            </div>
+      <div className="flex-1 p-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-white">Super Admin Dashboard</h1>
+            <p className="text-gray-400">Manage all users across the platform</p>
           </div>
-          
-          {error && (
-            <div className="bg-red-500/20 border border-red-500 text-white p-4 rounded-md mb-6">
-              {error}
-            </div>
-          )}
           
           {successMessage && (
-            <div className="bg-green-500/20 border border-green-500 text-white p-4 rounded-md mb-6">
-              {successMessage}
+            <div className="mb-4 p-4 bg-green-900/50 border border-green-700 text-green-200 rounded-lg flex items-start">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <p>{successMessage}</p>
             </div>
           )}
           
-          <div className="bg-gray-900 rounded-xl p-6 shadow-md">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold">Manage All Users</h2>
+          {error && (
+            <div className="mb-4 p-4 bg-red-900/50 border border-red-700 text-red-200 rounded-lg flex items-start">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <p>{error}</p>
+            </div>
+          )}
+          
+          {/* Tab navigation */}
+          <div className="mb-6 border-b border-gray-700">
+            <div className="flex flex-wrap -mb-px">
               <button
-                onClick={() => router.push('/auth/signup')}
-                className="px-4 py-2 rounded-md bg-indigo-600 hover:bg-indigo-700 transition-colors text-white text-sm"
+                className={`mr-2 inline-block py-4 px-4 border-b-2 font-medium text-sm ${
+                  activeTab === 'users'
+                    ? 'border-purple-500 text-purple-500'
+                    : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
+                }`}
+                onClick={() => setActiveTab('users')}
               >
-                Create New User
+                User Management
+              </button>
+              <button
+                className={`mr-2 inline-block py-4 px-4 border-b-2 font-medium text-sm ${
+                  activeTab === 'rankings'
+                    ? 'border-purple-500 text-purple-500'
+                    : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
+                }`}
+                onClick={() => setActiveTab('rankings')}
+              >
+                User Rankings
               </button>
             </div>
-            
-            <div className="overflow-x-auto">
-              <table className="w-full table-auto">
-                <thead className="bg-gray-800">
-                  <tr>
-                    <th className="px-4 py-3 text-left">Name</th>
-                    <th className="px-4 py-3 text-left">Email</th>
-                    <th className="px-4 py-3 text-left">Role</th>
-                    <th className="px-4 py-3 text-left">Club</th>
-                    <th className="px-4 py-3 text-left">Credits</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-700">
-                  {users.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-800/50">
-                      <td className="px-4 py-3 flex items-center space-x-3">
-                        {user.image ? (
-                          <img 
-                            src={user.image} 
-                            alt={user.name}
-                            className="h-8 w-8 rounded-full object-cover" 
-                          />
-                        ) : (
-                          <div className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center">
-                            <span className="text-white text-sm">{user.name.charAt(0)}</span>
-                          </div>
-                        )}
-                        <span>{user.name}</span>
-                      </td>
-                      <td className="px-4 py-3">{user.email}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs ${getRoleBadgeClass(user.role)}`}>
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {user.club ? (
-                          <span className={`px-2 py-1 rounded-full text-xs ${getClubBadgeClass(user.club)}`}>
-                            {user.club}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-1 rounded-full text-xs bg-yellow-500/20 text-yellow-300">
-                          {user.creditScore}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex space-x-2 justify-end">
-                          <button
-                            onClick={() => openActionModal(user, 'update-role')}
-                            className="px-3 py-1 rounded-md bg-indigo-600 hover:bg-indigo-700 transition-colors text-white text-sm"
-                          >
-                            Role
-                          </button>
-                          <button
-                            onClick={() => openActionModal(user, 'assign-club')}
-                            className="px-3 py-1 rounded-md bg-purple-600 hover:bg-purple-700 transition-colors text-white text-sm"
-                          >
-                            Club
-                          </button>
-                          <button
-                            onClick={() => openActionModal(user, 'update-credit')}
-                            className="px-3 py-1 rounded-md bg-yellow-600 hover:bg-yellow-700 transition-colors text-white text-sm"
-                          >
-                            Credits
-                          </button>
-                          <button
-                            onClick={() => openActionModal(user, 'update-info')}
-                            className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 transition-colors text-white text-sm"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => openActionModal(user, 'delete')}
-                            className="px-3 py-1 rounded-md bg-red-600 hover:bg-red-700 transition-colors text-white text-sm"
-                            disabled={session?.user?.email === user.email}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  
-                  {users.length === 0 && !loading && (
-                    <tr>
-                      <td colSpan={4} className="px-4 py-6 text-center text-gray-400">
-                        No users found
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
           </div>
+
+          {activeTab === 'rankings' ? (
+            <div className="bg-gray-900 rounded-lg overflow-hidden shadow-lg p-1">
+              <MemberRankings limit={50} />
+            </div>
+          ) : (
+            <div className="bg-gray-900 rounded-lg overflow-hidden shadow-lg">
+              {loading ? (
+                <div className="flex justify-center items-center p-10">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+                </div>
+              ) : (
+                <div className="max-w-7xl mx-auto">
+                  <div className="flex justify-between items-center mb-8">
+                    <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-indigo-500 bg-clip-text text-transparent">
+                      Super Admin Dashboard
+                    </h1>
+                    <div className="hidden md:flex space-x-4">
+                      <Link 
+                        href="/dashboard" 
+                        className="px-4 py-2 rounded-md bg-gray-800 text-white hover:bg-gray-700 transition-colors"
+                      >
+                        Back to Dashboard
+                      </Link>
+                      <button
+                        onClick={fetchUsers}
+                        className="px-4 py-2 rounded-md bg-indigo-600 hover:bg-indigo-700 transition-colors text-white"
+                        disabled={loading}
+                      >
+                        Refresh Users
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <table className="w-full table-auto">
+                      <thead className="bg-gray-800">
+                        <tr>
+                          <th className="px-4 py-3 text-left">Name</th>
+                          <th className="px-4 py-3 text-left">Email</th>
+                          <th className="px-4 py-3 text-left">Role</th>
+                          <th className="px-4 py-3 text-left">Club</th>
+                          <th className="px-4 py-3 text-left">Credits</th>
+                          <th className="px-4 py-3 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-700">
+                        {users.map((user) => (
+                          <tr key={user.id} className="hover:bg-gray-800/50">
+                            <td className="px-4 py-3 flex items-center space-x-3">
+                              {user.image ? (
+                                <img 
+                                  src={user.image} 
+                                  alt={user.name}
+                                  className="h-8 w-8 rounded-full object-cover" 
+                                />
+                              ) : (
+                                <div className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center">
+                                  <span className="text-white text-sm">{user.name.charAt(0)}</span>
+                                </div>
+                              )}
+                              <span>{user.name}</span>
+                            </td>
+                            <td className="px-4 py-3">{user.email}</td>
+                            <td className="px-4 py-3">
+                              <span className={`px-2 py-1 rounded-full text-xs ${getRoleBadgeClass(user.role)}`}>
+                                {user.role}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              {user.club ? (
+                                <span className={`px-2 py-1 rounded-full text-xs ${getClubBadgeClass(user.club)}`}>
+                                  {user.club}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400">-</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="px-2 py-1 rounded-full text-xs bg-yellow-500/20 text-yellow-300">
+                                {user.creditScore}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <div className="flex space-x-2 justify-end">
+                                <button
+                                  onClick={() => openActionModal(user, 'update-role')}
+                                  className="px-3 py-1 rounded-md bg-indigo-600 hover:bg-indigo-700 transition-colors text-white text-sm"
+                                >
+                                  Role
+                                </button>
+                                <button
+                                  onClick={() => openActionModal(user, 'assign-club')}
+                                  className="px-3 py-1 rounded-md bg-purple-600 hover:bg-purple-700 transition-colors text-white text-sm"
+                                >
+                                  Club
+                                </button>
+                                <button
+                                  onClick={() => openActionModal(user, 'update-credit')}
+                                  className="px-3 py-1 rounded-md bg-yellow-600 hover:bg-yellow-700 transition-colors text-white text-sm"
+                                >
+                                  Credits
+                                </button>
+                                <button
+                                  onClick={() => openActionModal(user, 'update-info')}
+                                  className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 transition-colors text-white text-sm"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => openActionModal(user, 'delete')}
+                                  className="px-3 py-1 rounded-md bg-red-600 hover:bg-red-700 transition-colors text-white text-sm"
+                                  disabled={session?.user?.email === user.email}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                        
+                        {users.length === 0 && !loading && (
+                          <tr>
+                            <td colSpan={4} className="px-4 py-6 text-center text-gray-400">
+                              No users found
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
       
