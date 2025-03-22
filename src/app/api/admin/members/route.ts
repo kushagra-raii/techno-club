@@ -1,52 +1,55 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import { connectToDatabase } from '@/lib/mongoose';
 import User from '@/lib/models/User';
-import { NextRequest } from 'next/server';
+import { connectToDatabase } from '@/lib/mongoose';
 
-export async function GET(request: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
-    // Get the current user's token to check permissions
-    const token = await getToken({ req: request });
-    
-    // Check if user is authenticated and has admin permissions
-    if (!token || !['admin', 'superadmin'].includes(token.role as string)) {
-      return NextResponse.json(
-        { message: 'Unauthorized. Only Admins can access this resource.' },
-        { status: 403 }
-      );
-    }
-
-    // Connect to database
     await connectToDatabase();
-
-    // Find all users with role 'user' or 'member'
-    const users = await User.find({
-      role: { $in: ['user', 'member'] }
-    })
-      .select('name email role image club creditScore')  // Include club and creditScore
-      .sort({ createdAt: -1 })
-      .lean();
-
-    return NextResponse.json(
-      {
-        users: users.map(user => ({
-          id: user._id.toString(),
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          image: user.image || null,
-          club: user.club || '',
-          creditScore: user.creditScore || 0,
-        })),
-      },
-      { status: 200 }
-    );
+    const token = await getToken({ req });
+    
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    const { role, club } = token;
+    const searchParams = new URL(req.url).searchParams;
+    const roleFilter = searchParams.get('role');
+    const clubFilter = searchParams.get('club');
+    
+    // Define the query with proper typing
+    const query: { role?: string; club?: string } = {};
+    
+    // Add role filter if provided
+    if (roleFilter) {
+      query.role = roleFilter;
+    }
+    
+    // Add club filter based on user role and provided club filter
+    if (role === 'superadmin') {
+      // Superadmins can see members from any club, or filter by a specific club
+      if (clubFilter) {
+        query.club = clubFilter;
+      }
+    } else if (role === 'admin') {
+      // Admins can only see members from their own club
+      query.club = club as string;
+    } else {
+      // Regular members shouldn't access this endpoint
+      return NextResponse.json({ error: 'Forbidden: Access denied' }, { status: 403 });
+    }
+    
+    console.log('Query:', query);
+    
+    const members = await User.find(query)
+      .select('name email role club creditScore profileImage')
+      .sort({ name: 1 });
+    
+    console.log('Found members:', members.length);
+    
+    return NextResponse.json(members);
   } catch (error) {
     console.error('Error fetching members:', error);
-    return NextResponse.json(
-      { message: 'An error occurred while fetching members' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch members' }, { status: 500 });
   }
-} 
+}

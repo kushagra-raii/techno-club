@@ -151,13 +151,14 @@ const AdminDashboard: React.FC = () => {
       }
       
       const data = await response.json();
+      console.log('Fetched data:', data);
       
       // Filter to only show users and members (not admins or superadmins)
       // If admin has a club, only show users in their club or with no club
-      const filteredUsers = data.users.filter(
+      const filteredUsers = Array.isArray(data) ? data.filter(
         (user: User) => ['user', 'member'].includes(user.role) && 
         (session?.user?.club ? user.club === session.user.club || user.club === '' : true)
-      );
+      ) : [];
       
       setUsers(filteredUsers);
     } catch (err) {
